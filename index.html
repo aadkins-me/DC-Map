@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="Interactive map of Washington, DC neighborhoods, Metro lines and landmarks for picking where to live." />
+    <meta name="theme-color" content="#312e81" />
+    <title>Where to Live in DC · Neighborhood Map</title>
+  </head>
+  <body>
+    <div id="map" aria-label="Map of Washington, DC"></div>
+
+    <aside id="panel" class="panel">
+      <header class="panel-head">
+        <button id="panel-toggle" class="panel-handle" aria-expanded="true" aria-controls="panel-body" aria-label="Toggle map controls"></button>
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">DC</span>
+          <div>
+            <h1>Where to live in DC</h1>
+            <p>Neighborhoods, Metro and landmarks</p>
+          </div>
+        </div>
+      </header>
+
+      <div id="panel-body" class="panel-body">
+        <section>
+          <h2>Base map</h2>
+          <div id="base-switch" class="segmented" role="group" aria-label="Base map"></div>
+        </section>
+
+        <section>
+          <h2>Layers</h2>
+          <div id="layer-list" class="layer-list"></div>
+        </section>
+
+        <section>
+          <h2>Legend</h2>
+          <div class="legend">
+            <div>
+              <h3>Metro lines</h3>
+              <ul id="metro-legend" class="legend-list"></ul>
+              <p class="legend-note"><span class="legend-station"></span> Station · larger = transfer</p>
+            </div>
+            <div>
+              <h3>Landmarks</h3>
+              <ul id="landmark-legend" class="legend-list"></ul>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="section-head">
+            <h2>Shortlist <span id="pin-count" class="count"></span></h2>
+            <button id="clear-pins" class="link-btn">Clear</button>
+          </div>
+          <ul id="pin-list" class="pin-list"></ul>
+          <button class="btn btn-outline btn-block" data-action="add-pin">+ Drop a pin</button>
+        </section>
+
+        <footer class="panel-foot">
+          <button class="btn btn-primary btn-block" data-action="share">Copy share link</button>
+          <button id="reset-view" class="link-btn">Reset to all of DC</button>
+          <p class="credits">
+            Tap a neighborhood to see its closest Metro stations. Data:
+            <a href="https://opendata.dc.gov" target="_blank" rel="noopener">DC Open Data</a>,
+            <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>,
+            <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>.
+          </p>
+        </footer>
+      </div>
+    </aside>
+
+    <div class="fab-stack">
+      <button class="fab" data-action="add-pin" aria-label="Drop a pin" title="Drop a pin">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
+      </button>
+      <button class="fab fab-primary" data-action="share" aria-label="Copy share link" title="Copy share link">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 13.4a1 1 0 0 1 0-1.4l3.5-3.5a3 3 0 1 1 4.2 4.2l-2 2a1 1 0 1 1-1.4-1.4l2-2a1 1 0 0 0-1.4-1.4L12 13.4a1 1 0 0 1-1.4 0zm2.8-2.8a1 1 0 0 1 0 1.4l-3.5 3.5a3 3 0 1 1-4.2-4.2l2-2a1 1 0 1 1 1.4 1.4l-2 2a1 1 0 0 0 1.4 1.4L12 10.6a1 1 0 0 1 1.4 0z"/></svg>
+      </button>
+    </div>
+
+    <div class="pin-hint" role="status">Tap anywhere to drop a pin · <kbd>Esc</kbd> to cancel</div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <div id="error" class="error-banner" role="alert" hidden></div>
+    <div id="loading" class="loading" aria-hidden="true"><div class="spinner"></div><span>Loading map of DC…</span></div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
