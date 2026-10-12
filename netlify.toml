@@ -5,6 +5,17 @@
 [build.environment]
   NODE_VERSION = "22"
 
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Local testing with Functions and Blobs: `npm run dev:netlify`, then open http://localhost:4319
+[dev]
+  command = "npm run dev"
+  targetPort = 4317
+  port = 4319
+  framework = "#custom"
+
 [[headers]]
   for = "/data/*"
   [headers.values]

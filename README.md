@@ -6,7 +6,8 @@ An interactive, shareable map of Washington, DC for deciding where to live. It s
 - **Metro rail**: all 6 lines in their official colors, plus every station. Click a station for its lines, address, and a WMATA link.
 - **Landmarks**: the U.S. Capitol, White House, Howard University, Union Station, National Mall, Georgetown University, Nationals Park, and about 20 more.
 - **Your pins**: drop pins on places you're considering, give them labels and colors, and drag them to adjust.
-- **Share links**: the link holds the map position, the layers you have on, and all your pins. Click **Copy share link** and send it to a friend. They'll see exactly what you see.
+- **Shared notes board**: click **Start shared board** to leave sticky notes for each other on a pin, on a neighborhood, or anywhere on the map. Notes show who wrote them and when, each person gets their own note color, and new notes appear for both of you within about 10 seconds. Anyone with the board link can read, add, edit, and delete notes.
+- **Share links**: the link holds the map position, the layers you have on, all your pins, and your notes board (if you started one). Click **Copy share link** and send it to a friend. They'll see exactly what you see.
 
 No accounts or API keys needed. The base maps come from free OpenStreetMap-based services ([OpenFreeMap](https://openfreemap.org) vector tiles, with a [CARTO](https://carto.com) raster "Classic" fallback). All DC data is bundled in `public/data/`.
 
@@ -37,7 +38,7 @@ This way, Netlify rebuilds the site automatically every time the repository chan
 4. Netlify reads the settings from `netlify.toml` on its own: build command `npm run build`, publish folder `dist`. Leave everything as it is and click **Deploy**.
 5. After a minute or two you'll get your `https://….netlify.app` link.
 
-Both options work on Netlify's free plan.
+Both options work on Netlify's free plan. The shared notes board needs Option B: drag-and-drop uploads only the static map, without the notes Function, so the notes panel would show as offline.
 
 ---
 
@@ -48,10 +49,14 @@ Both options work on Netlify's free plan.
 | Learn about an area | Click or tap any neighborhood. The popup lists the nearest Metro stations. |
 | Save a place | Click **Drop a pin** (or the pin button at the bottom right), then click the map. Type a label and pick a color. |
 | Move a pin | Drag it. |
+| Leave a note for your friend | Click **Start shared board** in the panel (once). Then tap the note button at the bottom right and tap the map, or open a pin or neighborhood and choose **Add note**. |
+| Read, edit, or delete a note | Tap the sticky note on the map, or tap it in the **Shared notes** list to fly there. |
 | Share your view | Click **Copy share link** and paste it into a text or email. |
 | Change the base map | Use **Streets**, **Light**, or **Classic** at the top of the panel. |
 
 On phones, the controls live in a bottom sheet. Tap its header to open or close it.
+
+The first time you write a note, the map asks for your name. It's saved in your browser only. The board you last used reopens automatically on the same device. To stop seeing it, use **Close board** under the notes list (the notes stay saved for anyone with the link).
 
 ---
 
@@ -61,7 +66,9 @@ Requires Node.js 20 or newer.
 
 ```bash
 npm install
-npm run dev        # http://localhost:4317
+npm run dev        # http://localhost:4317 (map only; the notes board shows as offline)
+npm run dev:netlify # http://localhost:4319 with the notes Function and a local Blobs store
+npm test           # server-side validation tests for the notes board
 npm run build      # production build into dist/
 npm run preview    # serve dist/ at http://localhost:4318
 npm run zip        # build + write release/dc-map-site.zip (for Netlify Drop)
@@ -82,6 +89,20 @@ All state is kept in the URL hash, so no server is needed:
 - `base=streets|light|raster`
 - `layers=` comma list from `neighborhoods,labels,metro,landmarks,pins,boundary`
 - `pins=` entries separated by `~`, each written as `lat,lng,colorIndex,label` (the label is URL-encoded)
+- `board=` optional notes board ID (24+ random URL-safe characters)
+- `notes=off` optional; present only when the Notes layer is hidden
+
+Links made before the notes feature keep working unchanged.
+
+### Shared notes board
+
+`netlify/functions/notes.mts` is a Netlify Function at `/api/notes` (GET list, POST create) and `/api/notes/:id` (PATCH edit, DELETE). Notes are stored in a [Netlify Blobs](https://docs.netlify.com/build/data-and-storage/netlify-blobs/) store named `map-notes`, one blob per board.
+
+- The board ID is sent in an `x-board-id` header, never in the request URL, so it stays out of request logs. Blobs are keyed by a SHA-256 hash of the ID, and the function never logs it.
+- The server rejects malformed or short IDs, caps notes at 500 characters, names at 30, boards at 200 notes, and request bodies at 4 KB, and only accepts coordinates in the DC area.
+- Writes use ETag-conditional saves, so two people saving at the same moment don't overwrite each other.
+- Rate limits: Netlify's platform limit (120 requests per minute per IP) plus a per-instance backstop (30 writes per minute per IP).
+- The page polls every 10 seconds while visible and refreshes right away when you switch back to the tab. If the Function can't be reached, the panel shows an offline notice and pauses editing.
 
 ### Project layout
 
@@ -89,6 +110,9 @@ All state is kept in the URL hash, so no server is needed:
 index.html               page shell and panel markup
 src/main.ts              map setup, overlays, popups, pins, share
 src/state.ts             URL hash encode/decode
+src/board.ts             notes board client (polling, offline state)
+netlify/functions/       notes API (Netlify Function)
+netlify/lib/             notes validation, with tests
 src/basemaps.ts          keyless base map styles
 src/data/landmarks.ts    landmark list
 src/data/metro.ts        WMATA colors and nearest-station math
@@ -102,6 +126,7 @@ release/dc-map-site.zip  prebuilt site for Netlify Drop
 
 - No API keys, accounts, or private data anywhere in the code or the repository. Only keyless public tile services and public datasets are used.
 - Your pins and labels live only in the share link (the part after `#`). They never reach a server or this repository. Browsers don't send the `#` part to the web host, so Netlify never sees it.
+- Notes live in Netlify Blobs on your Netlify site, not in this repository. Treat the board link like a private link: anyone who has it can read and change the notes. Your name and last board ID are stored only in your browser (localStorage).
 - No configuration is needed. If a setting is ever added, it goes in a gitignored `.env` file, documented in `.env.example`.
 
 ### Data sources
