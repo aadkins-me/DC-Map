@@ -7,7 +7,8 @@ An interactive, shareable map of Washington, DC for deciding where to live. It s
 - **Landmarks**: the U.S. Capitol, White House, Howard University, Union Station, National Mall, Georgetown University, Nationals Park, and about 20 more.
 - **Your pins**: drop pins on places you're considering, give them labels and colors, and drag them to adjust.
 - **Shared notes board**: click **Start shared board** to leave sticky notes for each other on a pin, on a neighborhood, or anywhere on the map. Notes show who wrote them and when, each person gets their own note color, and new notes appear for both of you within about 10 seconds. Anyone with the board link can read, add, edit, and delete notes.
-- **Share links**: the link holds the map position, the layers you have on, all your pins, and your notes board (if you started one). Click **Copy share link** and send it to a friend. They'll see exactly what you see.
+- **Rental searches**: the neighborhood popup has one-tap searches on Zillow, Redfin, HotPads and Craigslist, scoped to that area and to your **Rental criteria** (saved in your browser).
+- **Share links**: the link holds the map position, the layers you have on, all your pins, your notes board (if you started one), and your rental criteria. Click **Copy share link** and send it to a friend. They'll see exactly what you see.
 
 No accounts or API keys needed. The base maps come from free OpenStreetMap-based services ([OpenFreeMap](https://openfreemap.org) vector tiles, with a [CARTO](https://carto.com) raster "Classic" fallback). All DC data is bundled in `public/data/`.
 
@@ -51,6 +52,7 @@ Both options work on Netlify's free plan. The shared notes board needs Option B:
 | Move a pin | Drag it. |
 | Leave a note for your friend | Click **Start shared board** in the panel (once). Then tap the note button at the bottom right and tap the map, or open a pin or neighborhood and choose **Add note**. |
 | Read, edit, or delete a note | Tap the sticky note on the map, or tap it in the **Shared notes** list to fly there. |
+| Search rentals in an area | Tap a neighborhood, then a site button under **Rentals in this area**. Set bedrooms, den, baths, central air and max rent under **Rental criteria** in the panel. |
 | Share your view | Click **Copy share link** and paste it into a text or email. |
 | Change the base map | Use **Streets**, **Light**, or **Classic** at the top of the panel. |
 
@@ -91,6 +93,7 @@ All state is kept in the URL hash, so no server is needed:
 - `pins=` entries separated by `~`, each written as `lat,lng,colorIndex,label` (the label is URL-encoded)
 - `board=` optional notes board ID (24+ random URL-safe characters)
 - `notes=off` optional; present only when the Notes layer is hidden
+- `rent=` (optional, added by **Copy share link** unless turned off) rental criteria as `beds.bathsInTenths.flags[.maxRent]`, flags `d` = den, `a` = central air, `-` = neither. Example: `rent=2.25.da.3500`. Opening a link with it replaces the viewer's saved criteria.
 
 Links made before the notes feature keep working unchanged.
 
@@ -104,6 +107,19 @@ Links made before the notes feature keep working unchanged.
 - Rate limits: Netlify's platform limit (120 requests per minute per IP) plus a per-instance backstop (30 writes per minute per IP).
 - The page polls every 10 seconds while visible and refreshes right away when you switch back to the tab. If the Function can't be reached, the panel shows an offline notice and pauses editing.
 
+### Rental search links
+
+`src/rentals/` builds deep links only; nothing is fetched from the rental sites. Each search covers the bounding box (or center and radius) of the tapped neighborhood cluster.
+
+| Site | Beds | Baths | Den / office | Central heat & AC | Max rent | Area |
+| --- | --- | --- | --- | --- | --- | --- |
+| Zillow | exact | exact (half baths OK) | keyword `den` | "Must have A/C" (any A/C) | exact | map bounds |
+| Redfin | exact | exact (half baths OK) | not supported | Air conditioning amenity (any A/C) | exact | map viewport |
+| HotPads | exact | exact (half baths OK) | keyword `den` | A/C + Heating amenities | exact | map center + zoom |
+| Craigslist | exact | whole numbers only, rounds down | keyword `den \| office` | air conditioning checkbox (any A/C) | exact | radius around center |
+
+None of the sites filter on "central" specifically, so the UI asks people to double-check listings. Apartments.com was left out because its site blocks automated checks, so its URLs couldn't be verified.
+
 ### Project layout
 
 ```
@@ -113,6 +129,7 @@ src/state.ts             URL hash encode/decode
 src/board.ts             notes board client (polling, offline state)
 netlify/functions/       notes API (Netlify Function)
 netlify/lib/             notes validation, with tests
+src/rentals/             rental criteria panel, popup links and per-site URL builders
 src/basemaps.ts          keyless base map styles
 src/data/landmarks.ts    landmark list
 src/data/metro.ts        WMATA colors and nearest-station math
@@ -125,6 +142,7 @@ release/dc-map-site.zip  prebuilt site for Netlify Drop
 ### Privacy and configuration
 
 - No API keys, accounts, or private data anywhere in the code or the repository. Only keyless public tile services and public datasets are used.
+- Rental criteria are kept in `localStorage` on your device, and in the share link only if you leave **Include these criteria in share links** on.
 - Your pins and labels live only in the share link (the part after `#`). They never reach a server or this repository. Browsers don't send the `#` part to the web host, so Netlify never sees it.
 - Notes live in Netlify Blobs on your Netlify site, not in this repository. Treat the board link like a private link: anyone who has it can read and change the notes. Your name and last board ID are stored only in your browser (localStorage).
 - No configuration is needed. If a setting is ever added, it goes in a gitignored `.env` file, documented in `.env.example`.
