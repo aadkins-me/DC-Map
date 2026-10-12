@@ -75,7 +75,7 @@ The build uses relative paths (`base: './'`), so `dist/` works from any host or 
 All state is kept in the URL hash, so no server is needed:
 
 ```
-#map=13.50/38.91000/-77.03000&base=light&layers=neighborhoods,metro,landmarks&pins=38.91450,-77.03210,0,Apt%20on%2014th~...
+#map=13.50/38.91000/-77.03000&base=light&layers=neighborhoods,metro,landmarks&pins=38.90000,-77.03000,0,Example%20pin~...
 ```
 
 - `map=zoom/lat/lng`
@@ -97,6 +97,12 @@ scripts/fetch-data.mjs   downloads and slims the GeoJSON
 netlify.toml             Netlify build settings
 release/dc-map-site.zip  prebuilt site for Netlify Drop
 ```
+
+### Privacy and configuration
+
+- No API keys, accounts, or private data anywhere in the code or the repository. Only keyless public tile services and public datasets are used.
+- Your pins and labels live only in the share link (the part after `#`). They never reach a server or this repository. Browsers don't send the `#` part to the web host, so Netlify never sees it.
+- No configuration is needed. If a setting is ever added, it goes in a gitignored `.env` file, documented in `.env.example`.
 
 ### Data sources
 

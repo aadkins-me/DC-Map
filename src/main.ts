@@ -292,10 +292,16 @@ function setBase(base: BaseKey) {
   syncUrl();
 }
 
+// The style and the bundled data load independently; whichever finishes last adds the overlays.
+function ensureOverlays() {
+  if (map.getStyle()?.layers?.length && map.isStyleLoaded()) addOverlays();
+}
 map.on('style.load', () => {
-  addOverlays();
+  ensureOverlays();
   $('#loading').classList.add('is-done');
 });
+map.on('styledata', ensureOverlays);
+map.on('idle', ensureOverlays);
 
 map.on('error', (e) => {
   // If the keyless vector provider is unreachable, drop to the raster fallback once.
@@ -673,11 +679,7 @@ if (!location.hash.includes('map=')) map.fitBounds(DC_BOUNDS, { padding: fitPadd
 
 loadData()
   .then(() => {
-    const tryAdd = () => {
-      if (map.isStyleLoaded()) addOverlays();
-      else map.once('styledata', tryAdd);
-    };
-    tryAdd();
+    ensureOverlays();
     renderPinList();
   })
   .catch((err: Error) => {
