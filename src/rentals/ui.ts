@@ -110,7 +110,7 @@ function renderForm() {
       </div>
     </div>
     <label class="toggle rent-toggle">
-      <span class="toggle-text"><span class="toggle-label">Plus a den or office</span><span class="toggle-hint">Searched as a keyword on most sites</span></span>
+      <span class="toggle-text"><span class="toggle-label">Plus a den or office</span><span class="toggle-hint">Keyword search on Zillow, HotPads, Craigslist</span></span>
       <input type="checkbox" name="rent-den" ${c.den ? 'checked' : ''} />
       <span class="switch" aria-hidden="true"></span>
     </label>
@@ -130,7 +130,7 @@ function renderForm() {
       </label>
     </div>
     <label class="toggle rent-toggle">
-      <span class="toggle-text"><span class="toggle-label">Central heat &amp; AC</span><span class="toggle-hint">A/C filter where offered, else “central air” keyword</span></span>
+      <span class="toggle-text"><span class="toggle-label">Central heat &amp; AC</span><span class="toggle-hint">Each site’s A/C filter; heating too on HotPads</span></span>
       <input type="checkbox" name="rent-air" ${c.centralAir ? 'checked' : ''} />
       <span class="switch" aria-hidden="true"></span>
     </label>
@@ -138,7 +138,7 @@ function renderForm() {
       <input type="checkbox" name="rent-share" ${shareCriteria ? 'checked' : ''} />
       Include these criteria in share links
     </label>
-    <p class="rent-note">Tap a neighborhood for rental searches. Sites round half baths and match den / central air by keyword, so double-check each listing.</p>`;
+    <p class="rent-note">Tap a neighborhood for rental searches. Craigslist only takes whole-number baths (half baths round down), den is a keyword match, and A/C filters don’t say “central”, so double-check each listing.</p>`;
 }
 
 // ---------- Popup section ----------
@@ -149,7 +149,7 @@ export function rentalLinksElement(area: RentalArea, onEdit: () => void): HTMLEl
     const links = buildLinks(area, criteria);
     el.innerHTML = `
       <div class="pop-section rent-pop-head">
-        <span>Rentals near ${esc(area.place)}</span>
+        <span>Rentals in this area</span>
         <button class="link-btn" data-rent-edit>Edit criteria</button>
       </div>
       <p class="rent-pop-crit">${esc(summarize(criteria))}</p>
@@ -180,7 +180,11 @@ export function rentalLinksElement(area: RentalArea, onEdit: () => void): HTMLEl
 }
 
 export function focusRentalCriteria() {
-  section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const body = section?.closest<HTMLElement>('.panel-body');
+  if (section && body) {
+    const top = body.scrollTop + section.getBoundingClientRect().top - body.getBoundingClientRect().top - 8;
+    body.scrollTo({ top, behavior: 'smooth' });
+  }
   section?.classList.add('is-flash');
   window.setTimeout(() => section?.classList.remove('is-flash'), 1200);
 }

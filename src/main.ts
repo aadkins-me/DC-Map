@@ -382,6 +382,13 @@ function openPopup(lngLat: LngLatLike, content: HTMLElement | string, className 
   else popup.setDOMContent(content);
   popup.addTo(map);
   const opened = popup;
+  requestAnimationFrame(() => {
+    const box = popup?.getElement().getBoundingClientRect();
+    if (!box) return;
+    const bottomLimit = window.innerHeight - (window.matchMedia('(max-width: 720px)').matches ? 236 : 16);
+    const dy = box.bottom > bottomLimit ? Math.min(box.bottom - bottomLimit, box.top - 16) : box.top < 16 ? box.top - 16 : 0;
+    if (dy) map.panBy([0, dy]);
+  });
   popup.on('close', () => {
     if (popup === opened) {
       selectCluster(null);
@@ -413,7 +420,7 @@ function neighborhoodPopup(f: MapGeoJSONFeature, at: [number, number]) {
     startNote({ lng: at[0], lat: at[1], kind: 'hood', ref: p.title, hoodId: p.id });
   });
   const cluster = data.neighborhoods?.features.find((x) => x.properties?.id === p.id) ?? f;
-  el.insertBefore(rentalLinksElement(rentalArea(cluster, p.title, data['neighborhood-labels'], at), openRentalCriteria), el.querySelector('.pop-buttons'));
+  el.insertBefore(rentalLinksElement(rentalArea(cluster, p.title), openRentalCriteria), el.querySelector('.pop-buttons'));
   openPopup(at, el);
 }
 
