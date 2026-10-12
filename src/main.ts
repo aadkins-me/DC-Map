@@ -8,6 +8,8 @@ import { CATEGORY_META, LANDMARKS, landmarksGeoJSON } from './data/landmarks';
 import { METRO_COLORS, METRO_LINE_ORDER, nearestStations, parseStations, walkMinutes, type MetroLine, type Station } from './data/metro';
 import { ALL_LAYERS, BOARD_ID_RE, PIN_COLORS, newBoardId, parse, serialize, type AppState, type BaseKey, type LayerKey, type Pin } from './state';
 import { AUTHOR_MAX_LENGTH, BoardClient, BoardError, NOTE_MAX_LENGTH, fullTime, timeAgo, type NewNote, type Note } from './board';
+import { rentalArea } from './rentals/area';
+import { focusRentalCriteria, mountRentalCriteria, rentalHashParam, rentalLinksElement } from './rentals/ui';
 
 const DATA = `${import.meta.env.BASE_URL}data/`;
 const isMobile = () => window.matchMedia('(max-width: 720px)').matches;
@@ -410,6 +412,8 @@ function neighborhoodPopup(f: MapGeoJSONFeature, at: [number, number]) {
   el.querySelector('[data-note]')?.addEventListener('click', () => {
     startNote({ lng: at[0], lat: at[1], kind: 'hood', ref: p.title, hoodId: p.id });
   });
+  const cluster = data.neighborhoods?.features.find((x) => x.properties?.id === p.id) ?? f;
+  el.insertBefore(rentalLinksElement(rentalArea(cluster, p.title, data['neighborhood-labels'], at), openRentalCriteria), el.querySelector('.pop-buttons'));
   openPopup(at, el);
 }
 
@@ -1096,13 +1100,22 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && placeMode) setPlaceMode(null);
 });
 
+function openRentalCriteria() {
+  if (window.matchMedia('(max-width: 720px)').matches) {
+    popup?.remove();
+    setPanelOpen(true);
+  }
+  focusRentalCriteria();
+}
+
 // ---------- Share ----------
 async function share() {
   const c = map.getCenter();
   state.center = [c.lng, c.lat];
   state.zoom = map.getZoom();
-  const url = `${location.origin}${location.pathname}${serialize(state)}`;
-  history.replaceState(null, '', serialize(state));
+  const hash = serialize(state) + rentalHashParam();
+  const url = `${location.origin}${location.pathname}${hash}`;
+  history.replaceState(null, '', hash);
   try {
     await navigator.clipboard.writeText(url);
     const pins = state.pins.length ? `${state.pins.length} pin${state.pins.length > 1 ? 's' : ''}` : '';
@@ -1124,6 +1137,7 @@ function toast(msg: string) {
 
 // ---------- Boot ----------
 renderPanel();
+mountRentalCriteria($('#panel-body'), toast);
 renderPins();
 openBoard(state.board);
 if (state.board && !location.hash.includes('board=')) syncUrl();
