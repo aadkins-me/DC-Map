@@ -369,13 +369,13 @@ function nearestHtml(lngLat: [number, number], heading = 'Closest Metro stations
   return `<div class="pop-section">${heading}</div><ul class="st-list">${rows}</ul>`;
 }
 
-function openPopup(lngLat: LngLatLike, content: HTMLElement | string, className = '', offset: maplibregl.Offset = 12) {
+function openPopup(lngLat: LngLatLike, content: HTMLElement | string, className = '', offset: maplibregl.Offset = 12, anchor?: maplibregl.PositionAnchor) {
   const previous = popup;
   popup = null;
   previous?.remove();
   openNoteId = null;
   editingNote = false;
-  popup = new maplibregl.Popup({ maxWidth: '320px', className, focusAfterOpen: false, offset }).setLngLat(lngLat);
+  popup = new maplibregl.Popup({ maxWidth: '320px', className, focusAfterOpen: false, offset, anchor }).setLngLat(lngLat);
   if (typeof content === 'string') popup.setHTML(content);
   else popup.setDOMContent(content);
   popup.addTo(map);
@@ -711,7 +711,7 @@ function noteMarkerPlacement(n: Note): { anchor: maplibregl.PositionAnchor; offs
   if (n.kind !== 'pin') return { anchor: 'center', offset: [0, 0] };
   const siblings = board.notes.filter((o) => o.kind === 'pin' && Math.abs(o.lat - n.lat) < 2e-5 && Math.abs(o.lng - n.lng) < 2e-5);
   const k = Math.max(0, siblings.findIndex((o) => o.id === n.id));
-  return { anchor: 'bottom-left', offset: [8 + k * 12, -24 - k * 4] };
+  return { anchor: 'left', offset: [13 + k * 14, -28 + k * 3] };
 }
 
 function renderNotes() {
@@ -747,7 +747,7 @@ function syncOpenNote() {
 function popupOffset(n: Pick<Note, 'kind' | 'lat' | 'lng'> & { id?: string }): maplibregl.Offset {
   if (n.kind !== 'pin') return 18;
   const { offset } = noteMarkerPlacement(n as Note);
-  return [offset[0] + 15, offset[1] - 30];
+  return [offset[0] + 14, offset[1] - 16];
 }
 
 function notePopup(id: string, edit = false) {
@@ -820,7 +820,9 @@ function notePopup(id: string, edit = false) {
     });
   });
 
-  openPopup([n.lng, n.lat], el, 'note-popup', popupOffset(n));
+  // On phones, center the note so its popup (always above the note) never runs off the screen edge.
+  if (isMobile() && !map.isMoving()) map.easeTo({ center: [n.lng, n.lat], offset: [0, window.innerHeight * 0.12], duration: 300 });
+  openPopup([n.lng, n.lat], el, 'note-popup', popupOffset(n), isMobile() ? 'bottom' : undefined);
   popup!.getElement().dataset.rev = String(n.updatedAt);
   openNoteId = n.id;
   highlightNoteMarker();
@@ -895,7 +897,7 @@ async function startNote(draft: Omit<NewNote, 'author' | 'text'>) {
     });
   });
   if (isMobile()) map.easeTo({ center: [draft.lng, draft.lat], offset: [0, window.innerHeight * 0.18], duration: 300 });
-  openPopup([draft.lng, draft.lat], el, 'note-popup', popupOffset(draft));
+  openPopup([draft.lng, draft.lat], el, 'note-popup', popupOffset(draft), isMobile() ? 'bottom' : undefined);
   editingNote = true;
   setTimeout(() => textarea.focus(), 60);
 }
