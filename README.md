@@ -8,6 +8,8 @@ An interactive, shareable map of Washington, DC for deciding where to live. It s
 - **Your pins**: drop pins on places you're considering, give them labels and colors, and drag them to adjust.
 - **Shared notes board**: click **Start shared board** to leave sticky notes for each other on a pin, on a neighborhood, or anywhere on the map. Notes show who wrote them and when, each person gets their own note color, and new notes appear for both of you within about 10 seconds. Anyone with the board link can read, add, edit, and delete notes.
 - **Rental searches**: the neighborhood popup has one-tap searches on Zillow, Redfin, HotPads and Craigslist, scoped to that area and to your **Rental criteria** (saved in your browser).
+- **Aerial photos up close**: as you zoom in to street level (past about zoom 16), the drawn map fades into DC's own 2025 aerial photos (3-inch resolution). Street names, Metro, pins and notes stay on top. Under **Aerial photos** in the panel, choose **Auto**, **Always map**, or **Always aerial**.
+- **Street View**: zoomed in close, tap **Street View here** at the top of the map to open Google Street View at the map center in a new tab. Right-click (desktop) or long-press (phone) any spot for a Street View link there, and every neighborhood popup has a **Street View** button too.
 - **Share links**: the link holds the map position, the layers you have on, all your pins, your notes board (if you started one), and your rental criteria. Click **Copy share link** and send it to a friend. They'll see exactly what you see.
 
 No accounts or API keys needed. The base maps come from free OpenStreetMap-based services ([OpenFreeMap](https://openfreemap.org) vector tiles, with a [CARTO](https://carto.com) raster "Classic" fallback). All DC data is bundled in `public/data/`.
@@ -55,6 +57,8 @@ Both options work on Netlify's free plan. The shared notes board needs Option B:
 | Search rentals in an area | Tap a neighborhood, then a site button under **Rentals in this area**. Set bedrooms, den, baths, central air and max rent under **Rental criteria** in the panel. |
 | Share your view | Click **Copy share link** and paste it into a text or email. |
 | Change the base map | Use **Streets**, **Light**, or **Classic** at the top of the panel. |
+| See aerial photos | Zoom in to street level. To control it, use **Auto**, **Always map**, or **Always aerial** under **Aerial photos**. |
+| Look at a street | Zoom in close and tap **Street View here** (it uses the map center), right-click or long-press any spot, or tap **Street View** in a neighborhood popup. Google Maps opens in a new tab. |
 
 On phones, the controls live in a bottom sheet. Tap its header to open or close it.
 
@@ -93,9 +97,10 @@ All state is kept in the URL hash, so no server is needed:
 - `pins=` entries separated by `~`, each written as `lat,lng,colorIndex,label` (the label is URL-encoded)
 - `board=` optional notes board ID (24+ random URL-safe characters)
 - `notes=off` optional; present only when the Notes layer is hidden
+- `aerial=map|aerial` optional; present only when aerial photos are set to **Always map** or **Always aerial** (Auto is the default and adds nothing)
 - `rent=` (optional, added by **Copy share link** unless turned off) rental criteria as `beds.bathsInTenths.flags[.maxRent]`, flags `d` = den, `a` = central air, `-` = neither. Example: `rent=2.25.da.3500`. Opening a link with it replaces the viewer's saved criteria.
 
-Links made before the notes feature keep working unchanged.
+Links made before the notes and aerial features keep working unchanged.
 
 ### Shared notes board
 
@@ -120,6 +125,12 @@ Links made before the notes feature keep working unchanged.
 
 None of the sites filter on "central" specifically, so the UI asks people to double-check listings. Apartments.com was left out because its site blocks automated checks, so its URLs couldn't be verified.
 
+### Aerial photos and Street View
+
+`src/aerial.ts` adds DC's [2025 orthophoto](https://opendata.dc.gov/datasets/19d40ca7fd7947e88520367577673650) from the public `Ortho/Ortho_2025` ImageServer at `imagery.dcgis.dc.gov`. The service has no tile cache, so each map tile is an `exportImage` request in Web Mercator (`{bbox-epsg-3857}`, 512 px for sharp phone screens). The `jpgpng` format keeps tiles outside the District transparent, so Maryland and Virginia keep the drawn map. The photo layer sits under the base map's labels and under all of this map's overlays. While the photos are mostly showing, base-map street labels get solid white halos. In Auto mode the photos fade in between zoom 15.5 and 16.5, and nothing is requested below that. The Classic base has its labels baked into the picture, so over photos it adds street names from OpenFreeMap's vector tiles.
+
+`src/streetview.ts` builds Google's keyless [Maps URL](https://developers.google.com/maps/documentation/urls/get-started#street-view-action) (`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=LAT,LNG`). Google opens the nearest panorama. No Google API key and no embedded Street View are used. Long-press is detected on the map canvas (550 ms, under 10 px of movement), and the tap that ends a long press is swallowed so its popup stays open.
+
 ### Project layout
 
 ```
@@ -131,6 +142,8 @@ netlify/functions/       notes API (Netlify Function)
 netlify/lib/             notes validation, with tests
 src/rentals/             rental criteria panel, popup links and per-site URL builders
 src/basemaps.ts          keyless base map styles
+src/aerial.ts            DC aerial photo layer and Auto/Map/Aerial modes
+src/streetview.ts        Street View links and long-press
 src/data/landmarks.ts    landmark list
 src/data/metro.ts        WMATA colors and nearest-station math
 public/data/*.geojson    bundled DC Open Data layers
@@ -150,5 +163,7 @@ release/dc-map-site.zip  prebuilt site for Netlify Drop
 ### Data sources
 
 - Neighborhood clusters, neighborhood names, DC boundary, Metro lines and stations: [DC Open Data / DC GIS](https://opendata.dc.gov) (public domain).
+- Aerial photos: © 2025 [DC Office of the Chief Technology Officer](https://opendata.dc.gov/datasets/19d40ca7fd7947e88520367577673650), licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Credited in the map's attribution and in the panel footer.
+- Street View: opens [Google Maps](https://www.google.com/maps) in a new tab; nothing from Google is loaded inside this map.
 - Base map: © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, via [OpenFreeMap](https://openfreemap.org) and [CARTO](https://carto.com/attributions).
 - Walking times are rough estimates based on straight-line distance (about 20 minutes per mile, plus 25% to allow for street routes).

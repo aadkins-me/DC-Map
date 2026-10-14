@@ -135,7 +135,7 @@ function firstSymbolLayer(): string | undefined {
 function addOverlays() {
   if (!data.neighborhoods || map.getSource('neighborhoods')) return;
   const { font, boldFont } = BASEMAPS[state.base];
-  const beforeLabels = firstSymbolLayer();
+  const beforeLabels = aerial.overlaysBefore ?? firstSymbolLayer();
 
   map.addSource('dc-boundary', { type: 'geojson', data: data['dc-boundary'] });
   map.addSource('neighborhoods', { type: 'geojson', data: data.neighborhoods, promoteId: 'id' });

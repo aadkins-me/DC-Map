@@ -56,7 +56,11 @@ export function onLongPress(map: MlMap, onHold: (lngLat: [number, number]) => vo
     },
     { passive: true },
   );
-  canvas.addEventListener('touchend', cancel, { passive: true });
+  // The tap that ends a hold would otherwise click the map and close the popup it just opened.
+  canvas.addEventListener('touchend', (e) => {
+    if (!timer && Date.now() - firedAt < 900) e.preventDefault();
+    cancel();
+  });
   canvas.addEventListener('touchcancel', cancel, { passive: true });
 
   return {

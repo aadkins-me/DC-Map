@@ -38,6 +38,19 @@ export function aerialAmount(mode: AerialMode, zoom: number): number {
   return Math.min(1, Math.max(0, (zoom - FADE_START) / (FADE_END - FADE_START)));
 }
 
+/**
+ * First layer of the style's trailing run of labels. Some styles (OpenFreeMap Liberty) put a few
+ * symbol layers, like one-way arrows, below bridges and buildings, so the first symbol is too low.
+ */
+function labelBlockStart(map: MlMap): string | undefined {
+  const layers = map.getStyle().layers;
+  let lastShape = -1;
+  layers.forEach((l, i) => {
+    if (l.type !== 'symbol') lastShape = i;
+  });
+  return layers.slice(lastShape + 1).find((l) => l.type === 'symbol')?.id;
+}
+
 interface Halo {
   color: unknown;
   width: unknown;
@@ -51,6 +64,7 @@ export class AerialLayer {
   private mode: AerialMode = 'auto';
   private boosted = false;
   private savedHalos = new Map<string, Halo>();
+  private before: string | undefined;
 
   private map: MlMap;
 
@@ -65,7 +79,8 @@ export class AerialLayer {
     if (map.getLayer(AERIAL_LAYER)) return;
     this.savedHalos.clear();
     this.boosted = false;
-    const before = map.getLayer('nbhd-fill') ? 'nbhd-fill' : map.getStyle().layers.find((l) => l.type === 'symbol')?.id;
+    const before = map.getLayer('nbhd-fill') ? 'nbhd-fill' : labelBlockStart(map);
+    this.before = before === 'nbhd-fill' ? undefined : before;
     map.addSource(AERIAL_SOURCE, {
       type: 'raster',
       tiles: [ORTHO_TILE],
@@ -83,21 +98,35 @@ export class AerialLayer {
       },
       before,
     );
-    // The Classic base is a picture with its labels baked in, so on photos it needs a labels-only layer.
+    // The Classic base is a picture with its labels baked in, so photos would hide every street
+    // name. Draw street names from OpenFreeMap's keyless vector tiles on top instead.
     if (rasterLabels) {
-      map.addSource(LABELS_SOURCE, {
-        type: 'raster',
-        tiles: ['a', 'b', 'c', 'd'].map((s) => `https://${s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}@2x.png`),
-        tileSize: 256,
-        maxzoom: 20,
-        attribution: '© <a href="https://carto.com/attributions">CARTO</a>',
-      });
+      map.addSource(LABELS_SOURCE, { type: 'vector', url: 'https://tiles.openfreemap.org/planet' });
       map.addLayer(
-        { id: LABELS_LAYER, type: 'raster', source: LABELS_SOURCE, paint: { 'raster-opacity': opacityFor(this.mode), 'raster-opacity-transition': { duration: 450 } } },
-        map.getLayer('nbhd-fill') ? 'nbhd-fill' : undefined,
+        {
+          id: LABELS_LAYER,
+          type: 'symbol',
+          source: LABELS_SOURCE,
+          'source-layer': 'transportation_name',
+          minzoom: 14,
+          layout: {
+            'symbol-placement': 'line',
+            'text-field': ['coalesce', ['get', 'name:en'], ['get', 'name']],
+            'text-font': ['Open Sans Semibold'],
+            'text-size': ['interpolate', ['linear'], ['zoom'], 14, 10.5, 18, 14],
+            'text-max-angle': 30,
+          },
+          paint: { 'text-color': '#1f2937', 'text-halo-color': 'rgba(255,255,255,0.95)', 'text-halo-width': 1.8, 'text-opacity': opacityFor(this.mode) },
+        },
+        map.getLayer('nbhd-labels') ? 'nbhd-labels' : undefined,
       );
     }
     this.apply();
+  }
+
+  /** Where overlays go so they sit above the photos and below the base map's labels. */
+  get overlaysBefore(): string | undefined {
+    return this.before;
   }
 
   setMode(mode: AerialMode) {
@@ -113,8 +142,8 @@ export class AerialLayer {
     for (const id of [AERIAL_LAYER, LABELS_LAYER]) {
       if (!map.getLayer(id)) continue;
       map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none');
-      map.setLayerZoomRange(id, minzoom, 24);
-      map.setPaintProperty(id, 'raster-opacity', opacityFor(this.mode));
+      map.setLayerZoomRange(id, id === LABELS_LAYER ? Math.max(14, minzoom) : minzoom, 24);
+      map.setPaintProperty(id, id === LABELS_LAYER ? 'text-opacity' : 'raster-opacity', opacityFor(this.mode));
     }
     this.updateLabelBoost();
   }
@@ -128,7 +157,7 @@ export class AerialLayer {
     const style = map.getStyle();
     const aerialIndex = style.layers.findIndex((l) => l.id === AERIAL_LAYER);
     for (const layer of style.layers.slice(aerialIndex + 1)) {
-      if (layer.type !== 'symbol' || layer.source === 'neighborhood-labels' || layer.source === 'metro-stations' || layer.source === 'landmarks') continue;
+      if (layer.type !== 'symbol' || layer.id === LABELS_LAYER || layer.source === 'neighborhood-labels' || layer.source === 'metro-stations' || layer.source === 'landmarks') continue;
       if (!layer.layout?.['text-field']) continue;
       if (want) {
         if (!this.savedHalos.has(layer.id)) {
