@@ -30,6 +30,12 @@
         </section>
 
         <section>
+          <h2>Aerial photos</h2>
+          <div id="aerial-switch" class="segmented" role="group" aria-label="Aerial photos"></div>
+          <p id="aerial-hint" class="section-hint"></p>
+        </section>
+
+        <section>
           <h2>Layers</h2>
           <div id="layer-list" class="layer-list"></div>
         </section>
@@ -74,6 +80,10 @@
             <a href="https://opendata.dc.gov" target="_blank" rel="noopener">DC Open Data</a>,
             <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>,
             <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>.
+            Aerial photos ©&nbsp;2025
+            <a href="https://opendata.dc.gov/datasets/19d40ca7fd7947e88520367577673650" target="_blank" rel="noopener">DC Office of the Chief Technology Officer</a>,
+            <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC&nbsp;BY&nbsp;4.0</a>.
+            Right-click or long-press anywhere for Street View.
           </p>
         </footer>
       </div>
@@ -90,6 +100,12 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 13.4a1 1 0 0 1 0-1.4l3.5-3.5a3 3 0 1 1 4.2 4.2l-2 2a1 1 0 1 1-1.4-1.4l2-2a1 1 0 0 0-1.4-1.4L12 13.4a1 1 0 0 1-1.4 0zm2.8-2.8a1 1 0 0 1 0 1.4l-3.5 3.5a3 3 0 1 1-4.2-4.2l2-2a1 1 0 1 1 1.4 1.4l-2 2a1 1 0 0 0 1.4 1.4L12 10.6a1 1 0 0 1 1.4 0z"/></svg>
       </button>
     </div>
+
+    <a id="sv-button" class="sv-button" target="_blank" rel="noopener" href="https://www.google.com/maps" aria-hidden="true" tabindex="-1" title="Open Google Street View at the center of the map in a new tab">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="4.5" r="2.6"/><path d="M9.2 8.4h5.6a2 2 0 0 1 2 2v4.4a1 1 0 0 1-1 1h-1.1l-.6 5.2a1 1 0 0 1-1 .9h-2.2a1 1 0 0 1-1-.9l-.6-5.2H8.2a1 1 0 0 1-1-1v-4.4a2 2 0 0 1 2-2z"/></svg>
+      Street View here <span aria-hidden="true">↗</span>
+    </a>
+    <div class="center-reticle" aria-hidden="true"></div>
 
     <div class="pin-hint" role="status"><span id="place-hint-text">Tap anywhere to drop a pin</span> · <kbd>Esc</kbd> to cancel</div>
 
