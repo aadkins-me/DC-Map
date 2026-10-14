@@ -19,13 +19,25 @@ export interface AppState {
   base: BaseKey;
   layers: Set<LayerKey>;
   pins: Pin[];
+  /** Shared notes board ID, or null when no board is open. */
+  board: string | null;
+  notesVisible: boolean;
+}
+
+export const BOARD_ID_RE = /^[A-Za-z0-9_-]{22,64}$/;
+
+/** 144 random bits, base64url encoded (24 characters). */
+export function newBoardId(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(18));
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 export const DEFAULT_VIEW = { center: [-77.0254, 38.9035] as [number, number], zoom: 12 };
 
 const encodeLabel = (s: string) => encodeURIComponent(s).replace(/~/g, '%7E');
 
-// Hash format: #map=zoom/lat/lng&base=streets&layers=a,b&pins=lat,lng,color,label~...
+// Hash format: #map=zoom/lat/lng&base=streets&layers=a,b&pins=lat,lng,color,label~...&board=<id>&notes=off
+// The notes layer is a separate flag so `layers=` stays identical to links made before notes existed.
 export function serialize(state: AppState): string {
   const parts = [
     `map=${state.zoom.toFixed(2)}/${state.center[1].toFixed(5)}/${state.center[0].toFixed(5)}`,
@@ -40,6 +52,8 @@ export function serialize(state: AppState): string {
           .join('~'),
     );
   }
+  if (state.board) parts.push(`board=${state.board}`);
+  if (!state.notesVisible) parts.push('notes=off');
   return '#' + parts.join('&');
 }
 
@@ -50,6 +64,8 @@ export function parse(hash: string): AppState {
     base: 'light',
     layers: new Set(DEFAULT_LAYERS),
     pins: [],
+    board: null,
+    notesVisible: true,
   };
   const params = new Map<string, string>();
   for (const part of hash.replace(/^#/, '').split('&')) {
@@ -68,6 +84,10 @@ export function parse(hash: string): AppState {
 
   const layers = params.get('layers');
   if (layers) state.layers = new Set(layers.split(',').filter((l): l is LayerKey => ALL_LAYERS.includes(l as LayerKey)));
+
+  const board = params.get('board');
+  if (board && BOARD_ID_RE.test(board)) state.board = board;
+  if (params.get('notes') === 'off') state.notesVisible = false;
 
   const pins = params.get('pins');
   if (pins) {

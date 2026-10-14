@@ -1,0 +1,54 @@
+/* ---------- Rental criteria panel ---------- */
+.rent-panel { scroll-margin-top: 8px; transition: background 0.4s; border-radius: 10px; }
+.rent-panel.is-flash { background: #eef2ff; box-shadow: 0 0 0 8px #eef2ff; }
+.rent-summary { font-size: 13px; font-weight: 600; color: var(--brand); margin: -2px 0 10px; }
+.rent-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.rent-label { font-size: 12px; font-weight: 600; color: var(--muted); }
+.rent-optional { font-weight: 500; color: #94a3b8; }
+.rent-beds { grid-template-columns: 1.4fr repeat(4, 1fr); }
+.rent-beds .seg { font-size: 12.5px; padding: 6px 0; }
+.rent-row { display: grid; grid-template-columns: 1fr 1.2fr; gap: 10px; margin: 6px 0 2px; }
+.rent-input {
+  font: inherit; font-size: 14px; color: var(--ink); width: 100%; min-width: 0;
+  padding: 7px 9px; border: 1.5px solid var(--line); border-radius: 9px; background: #fff; outline: none;
+}
+.rent-input:focus { border-color: var(--brand-2); box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.15); }
+.rent-money { position: relative; display: block; }
+.rent-money > span { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 14px; pointer-events: none; }
+.rent-money .rent-input { padding-left: 21px; }
+.rent-toggle { margin-top: 6px; }
+.rent-check { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); margin-top: 8px; cursor: pointer; }
+.rent-check input { accent-color: var(--brand-2); width: 15px; height: 15px; margin: 0; }
+.rent-note {
+  font-size: 11.5px; line-height: 1.45; color: #92400e; background: #fffbeb; border: 1px solid #fde68a;
+  border-radius: 9px; padding: 7px 10px; margin-top: 10px;
+}
+
+/* ---------- Rental links in neighborhood popup ---------- */
+.rent-pop { border-top: 1px solid var(--line); margin-top: 12px; }
+.rent-pop-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.rent-pop-head .link-btn { font-size: 11.5px; text-transform: none; letter-spacing: 0; white-space: nowrap; }
+.rent-pop-crit { font-size: 12px; color: var(--ink); font-weight: 600; margin: -2px 0 8px; }
+.rent-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.rent-btn {
+  display: flex; flex-direction: column; gap: 1px; min-width: 0;
+  padding: 7px 9px 7px 11px; border-radius: 9px; text-decoration: none; color: var(--ink);
+  background: #fff; border: 1px solid var(--line); border-left: 3px solid var(--c);
+  transition: background 0.15s, border-color 0.15s;
+}
+.rent-btn:hover, .rent-btn:focus-visible { background: #f8faff; border-color: #c7d2fe; border-left-color: var(--c); outline: none; }
+.rent-btn-name { font-size: 13px; font-weight: 700; display: flex; justify-content: space-between; gap: 4px; }
+.rent-ext { color: var(--muted); font-weight: 500; }
+.rent-btn-meta { font-size: 10.5px; line-height: 1.35; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.rent-pop-note { font-size: 10.5px; color: var(--muted); line-height: 1.4; margin-top: 8px; }
+/* Only short screens need a scrolling popup; scroll containers inside moving popups repaint poorly. */
+@media (max-height: 680px) {
+  .maplibregl-popup-content:has(.rent-pop) { max-height: calc(100vh - 32px); overflow-y: auto; overscroll-behavior: contain; }
+}
+
+@media (max-width: 720px) {
+  .rent-btn { padding: 9px 9px 9px 11px; }
+}
+@media (max-width: 720px) and (max-height: 760px) {
+  .maplibregl-popup-content:has(.rent-pop) { max-height: calc(100dvh - 252px); overflow-y: auto; overscroll-behavior: contain; }
+}

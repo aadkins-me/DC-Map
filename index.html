@@ -58,6 +58,14 @@
           <button class="btn btn-outline btn-block" data-action="add-pin">+ Drop a pin</button>
         </section>
 
+        <section id="notes-section">
+          <div class="section-head">
+            <h2>Shared notes <span id="note-count" class="count"></span></h2>
+            <span id="board-status" class="status-pill" role="status"></span>
+          </div>
+          <div id="notes-body"></div>
+        </section>
+
         <footer class="panel-foot">
           <button class="btn btn-primary btn-block" data-action="share">Copy share link</button>
           <button id="reset-view" class="link-btn">Reset to all of DC</button>
@@ -75,12 +83,30 @@
       <button class="fab" data-action="add-pin" aria-label="Drop a pin" title="Drop a pin">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
       </button>
+      <button class="fab fab-note" data-action="add-note" aria-label="Add a note" title="Add a note" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14a2 2 0 0 1 2 2v9.6a2 2 0 0 1-.6 1.4l-5 5a2 2 0 0 1-1.4.6H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm9 16.6 5.6-5.6H15a1 1 0 0 0-1 1zM7 8a1 1 0 0 0 0 2h10a1 1 0 1 0 0-2zm0 4a1 1 0 0 0 0 2h5a1 1 0 1 0 0-2z"/></svg>
+      </button>
       <button class="fab fab-primary" data-action="share" aria-label="Copy share link" title="Copy share link">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 13.4a1 1 0 0 1 0-1.4l3.5-3.5a3 3 0 1 1 4.2 4.2l-2 2a1 1 0 1 1-1.4-1.4l2-2a1 1 0 0 0-1.4-1.4L12 13.4a1 1 0 0 1-1.4 0zm2.8-2.8a1 1 0 0 1 0 1.4l-3.5 3.5a3 3 0 1 1-4.2-4.2l2-2a1 1 0 1 1 1.4 1.4l-2 2a1 1 0 0 0 1.4 1.4L12 10.6a1 1 0 0 1 1.4 0z"/></svg>
       </button>
     </div>
 
-    <div class="pin-hint" role="status">Tap anywhere to drop a pin · <kbd>Esc</kbd> to cancel</div>
+    <div class="pin-hint" role="status"><span id="place-hint-text">Tap anywhere to drop a pin</span> · <kbd>Esc</kbd> to cancel</div>
+
+    <dialog id="name-dialog" class="dialog" aria-labelledby="name-dialog-title">
+      <form method="dialog" class="dialog-card">
+        <h2 id="name-dialog-title">What should we call you?</h2>
+        <p>Your name appears on the notes you write, so your friend knows who said what. It's saved on this device only.</p>
+        <label class="field">
+          <span>Your name</span>
+          <input id="name-input" type="text" autocomplete="nickname" placeholder="e.g. Sam" required />
+        </label>
+        <div class="dialog-actions">
+          <button class="btn btn-ghost-muted" value="cancel" formnovalidate>Cancel</button>
+          <button class="btn btn-primary" value="ok">Continue</button>
+        </div>
+      </form>
+    </dialog>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
     <div id="error" class="error-banner" role="alert" hidden></div>
     <div id="loading" class="loading" aria-hidden="true"><div class="spinner"></div><span>Loading map of DC…</span></div>
