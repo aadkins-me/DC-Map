@@ -3,10 +3,12 @@ import type { LngLatLike, MapGeoJSONFeature } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import './style.css';
+import { AERIAL_MODES, AERIAL_SOURCE, AerialLayer, aerialAmount } from './aerial';
 import { BASEMAPS } from './basemaps';
 import { CATEGORY_META, LANDMARKS, landmarksGeoJSON } from './data/landmarks';
 import { METRO_COLORS, METRO_LINE_ORDER, nearestStations, parseStations, walkMinutes, type MetroLine, type Station } from './data/metro';
-import { ALL_LAYERS, BOARD_ID_RE, PIN_COLORS, newBoardId, parse, serialize, type AppState, type BaseKey, type LayerKey, type Pin } from './state';
+import { ALL_LAYERS, BOARD_ID_RE, PIN_COLORS, newBoardId, parse, serialize, type AerialMode, type AppState, type BaseKey, type LayerKey, type Pin } from './state';
+import { STREET_VIEW_MIN_ZOOM, onLongPress, streetViewLink, streetViewUrl } from './streetview';
 import { AUTHOR_MAX_LENGTH, BoardClient, BoardError, NOTE_MAX_LENGTH, fullTime, timeAgo, type NewNote, type Note } from './board';
 import { rentalArea } from './rentals/area';
 import { focusRentalCriteria, mountRentalCriteria, rentalHashParam, rentalLinksElement } from './rentals/ui';
@@ -81,6 +83,8 @@ const map = new maplibregl.Map({
 map.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), 'top-right');
 map.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: false }), 'top-right');
 map.addControl(new maplibregl.ScaleControl({ unit: 'imperial' }), 'bottom-left');
+const aerial = new AerialLayer(map);
+aerial.setMode(state.aerial);
 
 // ---------- URL state ----------
 let writeTimer: number | undefined;
@@ -102,6 +106,7 @@ window.addEventListener('hashchange', () => {
   state.notesVisible = next.notesVisible;
   if (next.board) state.board = next.board;
   if (next.base !== state.base) setBase(next.base);
+  if (next.aerial !== state.aerial) setAerial(next.aerial);
   map.jumpTo({ center: next.center, zoom: next.zoom });
   applyLayerVisibility();
   renderPins();
@@ -130,7 +135,7 @@ function firstSymbolLayer(): string | undefined {
 function addOverlays() {
   if (!data.neighborhoods || map.getSource('neighborhoods')) return;
   const { font, boldFont } = BASEMAPS[state.base];
-  const beforeLabels = firstSymbolLayer();
+  const beforeLabels = aerial.overlaysBefore ?? firstSymbolLayer();
 
   map.addSource('dc-boundary', { type: 'geojson', data: data['dc-boundary'] });
   map.addSource('neighborhoods', { type: 'geojson', data: data.neighborhoods, promoteId: 'id' });
@@ -320,26 +325,47 @@ function selectCluster(id: number | null) {
 
 // ---------- Base map switching ----------
 let styleErrored = false;
+let styleReady = false;
 function setBase(base: BaseKey) {
   state.base = base;
   styleErrored = false;
+  styleReady = false;
   map.setStyle(BASEMAPS[base].style);
   renderPanel();
   syncUrl();
 }
 
+function setAerial(mode: AerialMode) {
+  state.aerial = mode;
+  aerial.setMode(mode);
+  renderPanel();
+  syncUrl();
+}
+
 // The style and the bundled data load independently; whichever finishes last adds the overlays.
+// isStyleLoaded() stays false while aerial tiles stream in, so readiness is tracked separately.
 function ensureOverlays() {
-  if (map.getStyle()?.layers?.length && map.isStyleLoaded()) addOverlays();
+  if (styleReady || (map.getStyle()?.layers?.length && map.isStyleLoaded())) addOverlays();
 }
 map.on('style.load', () => {
+  styleReady = true;
+  aerial.install(state.base === 'raster');
   ensureOverlays();
+  updateStreetViewButton();
   $('#loading').classList.add('is-done');
 });
 map.on('styledata', ensureOverlays);
 map.on('idle', ensureOverlays);
 
+let aerialErrorShown = false;
 map.on('error', (e) => {
+  if ((e as { sourceId?: string }).sourceId === AERIAL_SOURCE) {
+    if (!aerialErrorShown && aerialAmount(state.aerial, map.getZoom()) > 0) {
+      aerialErrorShown = true;
+      toast("DC aerial photos aren't loading right now, so you're seeing the drawn map.");
+    }
+    return;
+  }
   // If the keyless vector provider is unreachable, drop to the raster fallback once.
   const msg = String(e.error?.message ?? '');
   const styleUrl = BASEMAPS[state.base].style;
@@ -412,6 +438,7 @@ function neighborhoodPopup(f: MapGeoJSONFeature, at: [number, number]) {
     <div class="pop-buttons">
       <button class="btn btn-primary btn-sm" data-pin>Pin this spot</button>
       ${state.board ? '<button class="btn btn-note btn-sm" data-note>Add note</button>' : ''}
+      ${streetViewLink(at[1], at[0], 'btn btn-outline btn-sm', 'Street View')}
     </div>`;
   el.querySelector('[data-pin]')!.addEventListener('click', () => {
     addPin({ lng: at[0], lat: at[1], color: 0, label: p.title });
@@ -421,6 +448,29 @@ function neighborhoodPopup(f: MapGeoJSONFeature, at: [number, number]) {
   });
   const cluster = data.neighborhoods?.features.find((x) => x.properties?.id === p.id) ?? f;
   el.insertBefore(rentalLinksElement(rentalArea(cluster, p.title), openRentalCriteria), el.querySelector('.pop-buttons'));
+  openPopup(at, el);
+}
+
+/** Opened by right-click or long-press anywhere on the map. */
+function spotPopup(at: [number, number]) {
+  const hood = map.getLayer('nbhd-fill') ? map.queryRenderedFeatures(map.project(at), { layers: ['nbhd-fill'] })[0] : undefined;
+  const title = (hood?.properties as { title?: string } | undefined)?.title;
+  const station = nearestStations(stations, at, 1)[0];
+  const el = document.createElement('div');
+  el.className = 'pop spot-pop';
+  el.innerHTML = `
+    <div class="pop-kicker">${title ? esc(title) : 'This spot'}</div>
+    <h3>${streetViewLink(at[1], at[0], 'spot-sv')}</h3>
+    <p class="pop-sub">${at[1].toFixed(5)}, ${at[0].toFixed(5)}${station ? ` · ${station.miles < 0.1 ? '<0.1' : station.miles.toFixed(1)} mi to ${esc(station.station.name)}` : ''}</p>
+    <div class="pop-buttons">
+      <button class="btn btn-outline btn-sm" data-pin>Pin this spot</button>
+      ${state.board ? '<button class="btn btn-note btn-sm" data-note>Add note</button>' : ''}
+    </div>`;
+  el.querySelector('[data-pin]')!.addEventListener('click', () => {
+    addPin({ lng: at[0], lat: at[1], color: 0, label: title ?? `Spot ${state.pins.length + 1}` });
+  });
+  el.querySelector('[data-note]')?.addEventListener('click', () => startNote({ lng: at[0], lat: at[1], kind: 'free' }));
+  el.querySelector('[data-street-view]')!.addEventListener('click', () => popup?.remove());
   openPopup(at, el);
 }
 
@@ -594,7 +644,17 @@ map.on('mousemove', (e) => {
   }
 });
 
+const longPress = onLongPress(map, (at) => {
+  if (!placeMode) spotPopup(at);
+});
+map.on('contextmenu', (e) => {
+  e.originalEvent.preventDefault();
+  if (placeMode || longPress.justFired()) return;
+  spotPopup([e.lngLat.lng, e.lngLat.lat]);
+});
+
 map.on('click', (e) => {
+  if (longPress.justFired()) return;
   const at: [number, number] = [e.lngLat.lng, e.lngLat.lat];
   if (placeMode === 'pin') {
     addPin({ lng: at[0], lat: at[1], color: 0, label: `Spot ${state.pins.length + 1}` });
@@ -991,10 +1051,20 @@ const LAYER_UI: { key: LayerKey | 'notes'; label: string; hint: string; swatch: 
   { key: 'boundary', label: 'DC border', hint: 'District boundary', swatch: '<span class="sw sw-border"></span>' },
 ];
 
+const AERIAL_HINTS: Record<AerialMode, string> = {
+  auto: 'Fades to DC’s 2025 aerial photos as you zoom in to street level.',
+  map: 'Always show the drawn map, even up close.',
+  aerial: 'Show DC’s 2025 aerial photos at every zoom.',
+};
+
 function renderPanel() {
   $('#base-switch').innerHTML = (Object.keys(BASEMAPS) as BaseKey[])
     .map((k) => `<button class="seg${k === state.base ? ' is-active' : ''}" data-base="${k}" aria-pressed="${k === state.base}">${BASEMAPS[k].label}</button>`)
     .join('');
+  $('#aerial-switch').innerHTML = AERIAL_MODES.map(
+    ({ key, label }) => `<button class="seg${key === state.aerial ? ' is-active' : ''}" data-aerial="${key}" aria-pressed="${key === state.aerial}">${label}</button>`,
+  ).join('');
+  $('#aerial-hint').textContent = AERIAL_HINTS[state.aerial];
 
   $('#layer-list').innerHTML = LAYER_UI.map(
     (l) => `
@@ -1043,6 +1113,8 @@ $('#panel').addEventListener('click', (e) => {
   const t = e.target as HTMLElement;
   const base = t.closest<HTMLElement>('[data-base]')?.dataset.base as BaseKey | undefined;
   if (base && base !== state.base) setBase(base);
+  const aerialMode = t.closest<HTMLElement>('[data-aerial]')?.dataset.aerial as AerialMode | undefined;
+  if (aerialMode && aerialMode !== state.aerial) setAerial(aerialMode);
   const goto = t.closest<HTMLElement>('[data-goto]')?.dataset.goto;
   if (goto !== undefined) {
     const pin = state.pins[Number(goto)];
@@ -1114,6 +1186,20 @@ function openRentalCriteria() {
   }
   focusRentalCriteria();
 }
+
+// ---------- Street View ----------
+function updateStreetViewButton() {
+  const btn = $<HTMLAnchorElement>('#sv-button');
+  const show = map.getZoom() >= STREET_VIEW_MIN_ZOOM;
+  btn.classList.toggle('is-visible', show);
+  btn.tabIndex = show ? 0 : -1;
+  btn.setAttribute('aria-hidden', String(!show));
+  if (show) {
+    const c = map.getCenter();
+    btn.href = streetViewUrl(c.lat, c.lng);
+  }
+}
+map.on('move', updateStreetViewButton);
 
 // ---------- Share ----------
 async function share() {

@@ -1,5 +1,6 @@
 export type LayerKey = 'neighborhoods' | 'labels' | 'metro' | 'landmarks' | 'pins' | 'boundary';
 export type BaseKey = 'streets' | 'light' | 'raster';
+export type AerialMode = 'auto' | 'map' | 'aerial';
 
 export const ALL_LAYERS: LayerKey[] = ['neighborhoods', 'labels', 'metro', 'landmarks', 'pins', 'boundary'];
 export const DEFAULT_LAYERS: LayerKey[] = ['neighborhoods', 'labels', 'metro', 'landmarks', 'pins', 'boundary'];
@@ -22,6 +23,8 @@ export interface AppState {
   /** Shared notes board ID, or null when no board is open. */
   board: string | null;
   notesVisible: boolean;
+  /** Aerial photos: fade in at close zoom (auto), never, or at every zoom. */
+  aerial: AerialMode;
 }
 
 export const BOARD_ID_RE = /^[A-Za-z0-9_-]{22,64}$/;
@@ -36,8 +39,9 @@ export const DEFAULT_VIEW = { center: [-77.0254, 38.9035] as [number, number], z
 
 const encodeLabel = (s: string) => encodeURIComponent(s).replace(/~/g, '%7E');
 
-// Hash format: #map=zoom/lat/lng&base=streets&layers=a,b&pins=lat,lng,color,label~...&board=<id>&notes=off
+// Hash format: #map=zoom/lat/lng&base=streets&layers=a,b&pins=lat,lng,color,label~...&board=<id>&notes=off&aerial=map|aerial
 // The notes layer is a separate flag so `layers=` stays identical to links made before notes existed.
+// `aerial` is left out in its default (auto) mode, so older links and newly made ones read the same.
 export function serialize(state: AppState): string {
   const parts = [
     `map=${state.zoom.toFixed(2)}/${state.center[1].toFixed(5)}/${state.center[0].toFixed(5)}`,
@@ -54,6 +58,7 @@ export function serialize(state: AppState): string {
   }
   if (state.board) parts.push(`board=${state.board}`);
   if (!state.notesVisible) parts.push('notes=off');
+  if (state.aerial !== 'auto') parts.push(`aerial=${state.aerial}`);
   return '#' + parts.join('&');
 }
 
@@ -66,6 +71,7 @@ export function parse(hash: string): AppState {
     pins: [],
     board: null,
     notesVisible: true,
+    aerial: 'auto',
   };
   const params = new Map<string, string>();
   for (const part of hash.replace(/^#/, '').split('&')) {
@@ -88,6 +94,8 @@ export function parse(hash: string): AppState {
   const board = params.get('board');
   if (board && BOARD_ID_RE.test(board)) state.board = board;
   if (params.get('notes') === 'off') state.notesVisible = false;
+  const aerial = params.get('aerial');
+  if (aerial === 'map' || aerial === 'aerial') state.aerial = aerial;
 
   const pins = params.get('pins');
   if (pins) {
