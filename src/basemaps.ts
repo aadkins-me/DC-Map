@@ -22,17 +22,18 @@ export const BASEMAPS: Record<BaseKey, { label: string; style: string | StyleSpe
     style: {
       version: 8,
       glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+      // OpenStreetMap's standard tiles: keyless, fine for a low-traffic personal site under the OSM
+      // tile usage policy (browser requests send a valid Referer; attribution is required).
       sources: {
-        carto: {
+        osm: {
           type: 'raster',
-          tiles: ['a', 'b', 'c', 'd'].map((s) => `https://${s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png`),
+          tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
           tileSize: 256,
-          maxzoom: 20,
-          attribution:
-            '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
+          maxzoom: 19,
+          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         },
       },
-      layers: [{ id: 'carto', type: 'raster', source: 'carto' }],
+      layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
     },
   },
 };

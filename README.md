@@ -12,7 +12,7 @@ An interactive, shareable map of Washington, DC for deciding where to live. It s
 - **Street View**: zoomed in close, tap **Street View here** at the top of the map to open Google Street View at the map center in a new tab. Right-click (desktop) or long-press (phone) any spot for a Street View link there, and every neighborhood popup has a **Street View** button too.
 - **Share links**: the link holds the map position, the layers you have on, all your pins, your notes board (if you started one), and your rental criteria. Click **Copy share link** and send it to a friend. They'll see exactly what you see.
 
-No accounts or API keys needed. The base maps come from free OpenStreetMap-based services ([OpenFreeMap](https://openfreemap.org) vector tiles, with a [CARTO](https://carto.com) raster "Classic" fallback). All DC data is bundled in `public/data/`.
+No accounts or API keys needed. The base maps come from free OpenStreetMap-based services ([OpenFreeMap](https://openfreemap.org) vector tiles, with OpenStreetMap's standard raster tiles as the "Classic" map and automatic fallback). All DC data is bundled in `public/data/`.
 
 ---
 
@@ -165,5 +165,5 @@ release/dc-map-site.zip  prebuilt site for Netlify Drop
 - Neighborhood clusters, neighborhood names, DC boundary, Metro lines and stations: [DC Open Data / DC GIS](https://opendata.dc.gov) (public domain).
 - Aerial photos: © 2025 [DC Office of the Chief Technology Officer](https://opendata.dc.gov/datasets/19d40ca7fd7947e88520367577673650), licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Credited in the map's attribution and in the panel footer.
 - Street View: opens [Google Maps](https://www.google.com/maps) in a new tab; nothing from Google is loaded inside this map.
-- Base map: © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, via [OpenFreeMap](https://openfreemap.org) and [CARTO](https://carto.com/attributions).
+- Base map: © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, via [OpenFreeMap](https://openfreemap.org) vector tiles and the [OpenStreetMap standard tile layer](https://operations.osmfoundation.org/policies/tiles/) (Classic). On Classic, street names over aerial photos come from OpenFreeMap.
 - Walking times are rough estimates based on straight-line distance (about 20 minutes per mile, plus 25% to allow for street routes).
